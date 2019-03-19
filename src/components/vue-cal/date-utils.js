@@ -29,44 +29,13 @@ export const isDateToday = date => {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}` === todayFormatted
 }
 
-/* export const getDateOfWeek = (w, y) => {
-  let d = (1 + (w - 1) * 7) // 1st of January + 7 days for each week.
-  return new Date(y, 0, d)
-} */
-
-// Returns today if it's Monday or previous Monday otherwise.
-export const getPreviousMonday = (date = null) => {
-  let prevMonday = (date && new Date(date.valueOf())) || new Date()
-  prevMonday.setDate(prevMonday.getDate() - (prevMonday.getDay() + 6) % 7)
-  return prevMonday
+// Returns today if it's FirstDayOfWeek (Monday or Sunday) or previous FirstDayOfWeek otherwise.
+export const getPreviousFirstDayOfWeek = (date = null, weekStartsOnSunday) => {
+  let prevFirstDayOfWeek = (date && new Date(date.valueOf())) || new Date()
+  let dayModifier = weekStartsOnSunday ? 7 : 6
+  prevFirstDayOfWeek.setDate(prevFirstDayOfWeek.getDate() - (prevFirstDayOfWeek.getDay() + dayModifier) % 7)
+  return prevFirstDayOfWeek
 }
-
-/**
- * @param {int} The month number, 0 based.
- * @param {int} The year, not zero based, required to account for leap years.
- * @return {Date[]} List with date objects for each day of the month.
- */
-export const getDaysInMonth = (month, year) => {
-  let date = new Date(year, month, 1)
-  let days = []
-  while (date.getMonth() === month) {
-    days.push(new Date(date))
-    date.setDate(date.getDate() + 1)
-  }
-
-  return days
-}
-
-/* export const getDaysInWeek = (date) => {
-  date = getPreviousMonday(date)
-  let days = []
-  for (let i = 0; i < 7; i++) {
-    days.push(new Date(date))
-    date.setDate(date.getDate() + 1)
-  }
-
-  return days
-} */
 
 const nth = (d) => {
   if (d > 3 && d < 21) return 'th'

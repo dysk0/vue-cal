@@ -9,7 +9,7 @@
 ## Installation
 
 ```
-npm i vue-cal --save-dev
+npm i --S vue-cal
 ```
 
 ## Demo & Documentation
@@ -26,6 +26,21 @@ ___
 
 ## Release Notes
 
+- __Version 1.41.0__ Add Romanian language
+- __Version 1.39.0__ Add Vietnamese language
+- __Version 1.38.0__ showAllDayEvents now also accepts string 'short'
+- __Version 1.36.0__ Add out of scope events in month view
+- __Version 1.35.0__ Allow displaying all-day events in fixed top bar
+- __Version 1.34.0__ Allow starting week on Sunday
+- __Version 1.33.0__ Minor internal structure improvements
+- __Version 1.32.0__ Allow Syncing 2 vue-cal instances
+- __Version 1.31.0__ Add CSS transitions option
+- __Version 1.30.0__ Allow custom event rendering
+- __Version 1.29.0__ Accept a callback function on event click / dblclick
+- __Version 1.28.0__ Add Polish language
+- __Version 1.27.0__ Allow overriding 'No event' text
+- __Version 1.26.0__ Emitted events ready &amp; view-change return events
+- __Version 1.25.0__ Support multiple day events
 - __Version 1.24.0__ Allow hiding the calendar body
 - __Version 1.22.0__ Add Slovak language
 - __Version 1.21.0__ Add Georgian language
