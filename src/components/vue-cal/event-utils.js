@@ -38,13 +38,14 @@ const deleteLinkedEvents = function (event, cellEvents) {
 
 export const onResizeEvent = function ({ vuecal, cellEvents }) {
   let { eventId, newHeight } = vuecal.domEvents.resizeAnEvent
-  let event = cellEvents.filter(e => e.id === eventId)[0]
+  let event = cellEvents.find(e => e.id === eventId)
 
   if (event) {
     event.height = Math.max(newHeight, 10)
     updateEndTimeOnResize({ event, vuecal })
 
-    if (!event.background) checkCellOverlappingEvents({ split: event.split || 0, cellEvents, vuecal })
+    // if (!event.background) checkCellOverlappingEvents({ event, split: event.split || 0, cellEvents, vuecal })
+    checkEventOverlaps(event, cellEvents.filter(e => e.id !== event.id))
   }
 }
 
@@ -74,9 +75,69 @@ export const updateEndTimeOnResize = function ({ event, vuecal }) {
   }
 }
 
+// Object of cells (days) containing array of overlapping events.
+export let cellOverlappingEvents = {}
+export let cellSortedEvents = {}
+
+export const initCellOverlappingEvents = function (cellDate, cellEvents) {
+  if (!cellOverlappingEvents[cellDate]) cellOverlappingEvents[cellDate] = {}
+  let eventsToCompare = cellEvents.slice(0)
+
+  cellEvents.forEach(event => {
+    // Remove the current event from the list when compared for performance.
+    eventsToCompare.shift()
+    checkEventOverlaps(event, eventsToCompare)
+  })
+
+  console.log(cellOverlappingEvents)
+  cellSortedEvents[cellDate] = {}
+  cellSortedEvents[cellDate] = cellEvents.sort((a, b) => a.startTimeMinutes - b.startTimeMinutes).map(e => e.id)
+}
+
 // Will recalculate all the overlaps of the current cell OR split.
 // cellEvents will contain only the current split events if in a split.
-export const checkCellOverlappingEvents = function ({ cellEvents, vuecal }) {
+export const checkEventOverlaps = function (event, otherCellEvents) {
+  const cellDate = event.startDate
+  if (!cellOverlappingEvents[cellDate][event.id]) cellOverlappingEvents[cellDate][event.id] = []
+
+  const dragEventStart = event.startTimeMinutes
+  const dragEventEnd = event.endTimeMinutes
+  let { [cellDate]: currCellOverlappingEvents } = cellOverlappingEvents
+
+  // For each other event of the cell, check if overlapping current dragging event
+  // and add it if not already in overlapping events.
+  otherCellEvents.forEach(e => {
+    let stillEventStart = e.startTimeMinutes
+    let stillEventEnd = e.endTimeMinutes
+    let dragEventOverlapStillEvent = (dragEventStart <= stillEventStart) && (dragEventEnd > stillEventStart)
+    let stillEventOverlapDragEvent = (stillEventStart <= dragEventStart) && (stillEventEnd > dragEventStart)
+    if (!cellOverlappingEvents[cellDate][e.id]) cellOverlappingEvents[cellDate][e.id] = []
+
+    if (dragEventOverlapStillEvent || stillEventOverlapDragEvent) {
+      if (currCellOverlappingEvents[event.id].indexOf(e.id) === -1) cellOverlappingEvents[cellDate][event.id].push(e.id)
+      if (currCellOverlappingEvents[e.id].indexOf(event.id) === -1) cellOverlappingEvents[cellDate][e.id].push(event.id)
+    }
+    else {
+      let dragEventInOverlaps = currCellOverlappingEvents && currCellOverlappingEvents[event.id] && currCellOverlappingEvents[event.id].indexOf(e.id) > -1
+      let stillEventInOverlaps = currCellOverlappingEvents && currCellOverlappingEvents[e.id] && currCellOverlappingEvents[e.id].indexOf(event.id) > -1
+
+      // Delete still event id from dragging array.
+      if (dragEventInOverlaps) {
+        let eventIndex = currCellOverlappingEvents[event.id].indexOf(e.id)
+        cellOverlappingEvents[cellDate][event.id].splice(eventIndex, 1)
+      }
+
+      // Delete dragging event id from still event.
+      if (stillEventInOverlaps) {
+        let eventIndex = currCellOverlappingEvents[e.id].indexOf(event.id)
+        cellOverlappingEvents[cellDate][e.id].splice(eventIndex, 1)
+      }
+    }
+  })
+
+  console.log(cellOverlappingEvents)
+}
+/* export const checkCellOverlappingEvents = function ({ cellEvents, vuecal }) {
   if (cellEvents) {
     const foregroundEventsList = cellEvents.filter(item => !item.background)
 
@@ -106,9 +167,12 @@ export const checkCellOverlappingEvents = function ({ cellEvents, vuecal }) {
   }
 
   return cellEvents
-}
+} */
 
 export const checkOverlappingEvents = function ({ event, comparisonArray, cellEvents }) {
+
+}
+/* export const checkOverlappingEvents = function ({ event, comparisonArray, cellEvents }) {
   const src = (event.multipleDays.daysCount && event.multipleDays) || event
   const { startTimeMinutes: startTimeMinE1, endTimeMinutes: endTimeMinE1 } = src
 
@@ -152,7 +216,7 @@ export const checkOverlappingEvents = function ({ event, comparisonArray, cellEv
       delete event2.simultaneous[event.id]
     }
   })
-}
+} */
 
 export const updateEventPosition = function ({ event, vuecal }) {
   const src = (event.multipleDays.daysCount && event.multipleDays) || event

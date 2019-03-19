@@ -13,7 +13,7 @@
       .vuecal__no-event(v-if="!events.length && ['week', 'day'].indexOf(view) > -1")
         slot(name="no-event") {{ texts.noEvent }}
       .vuecal__cell-events(
-        v-if="events.length && (['week', 'day'].indexOf(view) > -1 || (view === 'month' && eventsOnMonthView)) && checkCellOverlappingEvents({ split: 0, cellEvents: splits.length ? splitEvents[i] : events, vuecal: $parent })")
+        v-if="events.length && (['week', 'day'].indexOf(view) > -1 || (view === 'month' && eventsOnMonthView))")
         event(
           :vuecal="$parent"
           :event="event"
@@ -28,7 +28,7 @@
 </template>
 
 <script>
-import { updateEventPosition, checkCellOverlappingEvents } from './event-utils'
+import { updateEventPosition, initCellOverlappingEvents } from './event-utils'
 import Event from './event'
 
 export default {
@@ -63,8 +63,11 @@ export default {
       default: false
     }
   },
-  methods: {
-    checkCellOverlappingEvents
+  created () {
+    initCellOverlappingEvents(
+      this.formattedDate,
+      this.splits.length ? this.splitEvents[i] : this.events
+    )
   },
 
   computed: {
