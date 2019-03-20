@@ -22,7 +22,7 @@
 </template>
 
 <script>
-import { deleteAnEvent, onResizeEvent, cellOverlappingEvents, cellSortedEvents } from './event-utils'
+import { deleteAnEvent, onResizeEvent, cellOverlappingEvents, cellSortedEvents, checkDeepOverlaps } from './event-utils'
 
 export default {
   props: {
@@ -64,62 +64,30 @@ export default {
       if (!event.startTime || this.vuecal.view.id === 'month' || this.allDayEvents) return {}
       const resizeAnEvent = this.domEvents.resizeAnEvent
 
-      // console.log(this.cellSortedEvents.indexOf(event.id))
+      let sortedEvents = this.cellSortedEvents.filter(id => id === event.id || this.cellOverlappingEvents[event.id].includes(id))
 
-      let simultaneous = this.cellOverlappingEvents[event.id].length + 1
+      let deepOverlaps = checkDeepOverlaps(event)
 
-      let sortedEvents = this.cellSortedEvents.filter(id => this.cellOverlappingEvents[event.id].indexOf(id) > -1)
-      // this.cellOverlappingEvents[event.id].forEach(id => {
-      // })
-
-      const eventWidth = 100 / (simultaneous)
+      const eventWidth = 100 / (1 + (this.cellOverlappingEvents[event.id].length && 1) + (deepOverlaps.length ? deepOverlaps.length - 1 : 0))
 
       return {
         top: `${event.top}px`,
         height: `${resizeAnEvent.newHeight && resizeAnEvent.eventId === event.id ? resizeAnEvent.newHeight : event.height}px`,
         width: eventWidth + '%',
-        left: (eventWidth * sortedEvents.indexOf(event.id)) + '%'
+        left: eventWidth * sortedEvents.indexOf(event.id) + '%'
       }
     },
 
     eventClasses (event) {
-      // const overlapping = Object.keys(event.overlapping).length
-      // const overlapped = Object.keys(event.overlapped).length
-      // let simultaneous = Object.keys(event.simultaneous).length + 1
-      // let forceLeft = false
-      let deletable = this.domEvents.clickHoldAnEvent.eventId &&
-                      (this.domEvents.clickHoldAnEvent.eventId === event.id ||
-                      event.linked.find(e => e.id === this.domEvents.clickHoldAnEvent.eventId))
-
-      // if (simultaneous >= 3) {
-      //   let split3 = simultaneous - 1
-      //   Object.keys(event.simultaneous).forEach(eventId => {
-      //     if (split3 && Object.keys(this.cellEvents.find(e => e.id === eventId).simultaneous).length + 1 < 3) {
-      //       split3--
-      //     }
-      //   })
-      //   if (!split3) simultaneous = 2
-      // }
-
-      // else if (simultaneous === 2) {
-      //   const otherEvent = this.cellEvents.find(e => e.id === Object.keys(event.simultaneous)[0])
-
-      //   if (otherEvent && Object.keys(otherEvent.overlapping).length && Object.keys(otherEvent.overlapped).length) {
-      //     forceLeft = true
-      //   }
-      // }
+      const deletable = this.domEvents.clickHoldAnEvent.eventId &&
+                        (this.domEvents.clickHoldAnEvent.eventId === event.id ||
+                        event.linked.find(e => e.id === this.domEvents.clickHoldAnEvent.eventId))
 
       return {
         [event.classes.join(' ')]: true,
         'vuecal__event--focus': this.domEvents.focusAnEvent.eventId === event.id,
         'vuecal__event--background': event.background,
         'vuecal__event--deletable': deletable,
-        // 'vuecal__event--overlapped': overlapped,
-        // 'vuecal__event--overlapping': overlapping,
-        // 'vuecal__event--split2': simultaneous === 2,
-        // 'vuecal__event--split3': simultaneous >= 3,
-        // 'vuecal__event--split-middle': overlapped && overlapping && simultaneous >= 3,
-        // 'vuecal__event--split-left': forceLeft,
         'vuecal__event--all-day': event.allDay,
         // Multiple days events.
         'vuecal__event--multiple-days': Object.keys(event.multipleDays).length,
@@ -265,25 +233,6 @@ export default {
     left: 0;
     right: 0;
   }
-
-  // &--overlapped {right: 20%;}
-  // &--overlapping:not(.vuecal__event--split2):not(.vuecal__event--split3) {left: 30%;box-shadow: 0 0 5px rgba(#000, 0.2);}
-  // &--overlapped.vuecal__event--split2 {right: 25%;}
-  // &--overlapping.vuecal__event--split2 {left: 25%;}
-  // &--overlapping.vuecal__event--split2.vuecal__event--split-left {left: 0;right: 25%;}
-  // &--overlapped.vuecal__event--overlapping.vuecal__event--split2 {left: 25%;right: 0;}
-  // &--overlapped.vuecal__event--split3 {right: 40%;}
-  // &--overlapping.vuecal__event--split3 {left: 40%;}
-  // &--overlapping.vuecal__event--split3.vuecal__event--split-middle {left: 20%;right: 20%;}
-
-  // .vuecal--no-event-overlaps &--overlapping:not(.vuecal__event--split2):not(.vuecal__event--split3) {left: 30%;box-shadow: 0 0 5px rgba(#000, 0.2);}
-  // .vuecal--no-event-overlaps &--overlapped.vuecal__event--split2 {right: 50%;}
-  // .vuecal--no-event-overlaps &--overlapping.vuecal__event--split2 {left: 50%;}
-  // .vuecal--no-event-overlaps &--overlapping.vuecal__event--split2.vuecal__event--split-left {left: 0;right: 50%;}
-  // .vuecal--no-event-overlaps &--overlapped.vuecal__event--overlapping.vuecal__event--split2 {left: 50%;right: 0;}
-  // .vuecal--no-event-overlaps &--overlapped.vuecal__event--split3 {right: 66.66%;}
-  // .vuecal--no-event-overlaps &--overlapping.vuecal__event--split3 {left: 66.66%;}
-  // .vuecal--no-event-overlaps &--overlapping.vuecal__event--split3.vuecal__event--split-middle {left: 33.33%;right: 33.33%;}
 
   &--background {z-index: 0;}
   &--focus {box-shadow: 1px 1px 6px rgba(0,0,0,0.2);z-index: 3;}

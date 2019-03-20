@@ -505,9 +505,6 @@ export default {
           content: '',
           height: 0,
           top: 0,
-          overlapped: {},
-          overlapping: {},
-          simultaneous: {},
           linked: [], // Linked events.
           multipleDays: {},
           allDay: false,
@@ -569,9 +566,6 @@ export default {
             this.mutableEvents[date].push({
               ...event,
               id: eventPieces[i - 1].id,
-              overlapped: {},
-              overlapping: {},
-              simultaneous: {},
               linked,
               // All the dates in the multipleDays object property are related
               // to the current event piece (only 1 day) not the whole event.
@@ -601,7 +595,7 @@ export default {
 
       // Delete vue-cal specific props instead of returning a set of props so user
       // can place whatever they want inside an event and see it returned.
-      const discardProps = ['height', 'top', 'overlapped', 'overlapping', 'simultaneous', 'classes', 'split']
+      const discardProps = ['height', 'top', 'classes']
       for (let prop in event) if (discardProps.indexOf(prop) > -1) delete event[prop]
       if (!event.multipleDays.daysCount) delete event.multipleDays
 
