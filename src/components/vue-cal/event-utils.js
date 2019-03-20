@@ -96,24 +96,18 @@ export const initCellOverlappingEvents = function (cellDate, cellEvents) {
 
 // Will recalculate all the overlaps of the current cell OR split.
 // cellEvents will contain only the current split events if in a split.
-export const checkEventOverlaps = function (event, otherCellEvents) {
+export const checkEventOverlaps = (event, otherCellEvents) => {
   const cellDate = event.startDate
-  if (!cellOverlappingEvents[cellDate][event.id]) cellOverlappingEvents[cellDate][event.id] = []
 
-  const dragEventStart = event.startTimeMinutes
-  const dragEventEnd = event.endTimeMinutes
+  if (!cellOverlappingEvents[cellDate][event.id]) cellOverlappingEvents[cellDate][event.id] = []
   let { [cellDate]: currCellOverlappingEvents } = cellOverlappingEvents
 
   // For each other event of the cell, check if overlapping current dragging event
   // and add it if not already in overlapping events.
   otherCellEvents.forEach(e => {
-    let stillEventStart = e.startTimeMinutes
-    let stillEventEnd = e.endTimeMinutes
-    let dragEventOverlapStillEvent = (dragEventStart <= stillEventStart) && (dragEventEnd > stillEventStart)
-    let stillEventOverlapDragEvent = (stillEventStart <= dragEventStart) && (stillEventEnd > dragEventStart)
     if (!cellOverlappingEvents[cellDate][e.id]) cellOverlappingEvents[cellDate][e.id] = []
 
-    if (dragEventOverlapStillEvent || stillEventOverlapDragEvent) {
+    if (eventInTimeRange(event.startTimeMinutes, event.endTimeMinutes, e)) {
       if (currCellOverlappingEvents[event.id].indexOf(e.id) === -1) cellOverlappingEvents[cellDate][event.id].push(e.id)
       if (currCellOverlappingEvents[e.id].indexOf(event.id) === -1) cellOverlappingEvents[cellDate][e.id].push(event.id)
     }
@@ -137,6 +131,36 @@ export const checkEventOverlaps = function (event, otherCellEvents) {
 
   console.log(cellOverlappingEvents)
 }
+
+export const eventInTimeRange = (start, end, event) => {
+  let dragEventOverlapStillEvent = (start <= event.startTimeMinutes) && (end > event.startTimeMinutes)
+  let stillEventOverlapDragEvent = (event.startTimeMinutes <= start) && (event.endTimeMinutes > start)
+
+  return dragEventOverlapStillEvent || stillEventOverlapDragEvent
+}
+
+/**
+ * Returns an array of event ids in range.
+ *
+ * @param {Number} start Start of time range
+ * @param {Number} end End of time range
+ * @param {Array} events An array of events to check if in time range
+ * @return {Array} Array of event ids in range
+ */
+export const eventsInTimeRange = (start, end, events) => {
+  let overlaps = []
+
+  events.forEach(e => {
+    let stillEventStart = e.startTimeMinutes
+    let stillEventEnd = e.endTimeMinutes
+    let dragEventOverlapStillEvent = (start <= stillEventStart) && (end > stillEventStart)
+    let stillEventOverlapDragEvent = (stillEventStart <= start) && (stillEventEnd > start)
+
+    if (dragEventOverlapStillEvent || stillEventOverlapDragEvent) overlaps.push(e.id)
+  })
+  return overlaps
+}
+
 /* export const checkCellOverlappingEvents = function ({ cellEvents, vuecal }) {
   if (cellEvents) {
     const foregroundEventsList = cellEvents.filter(item => !item.background)
@@ -169,9 +193,6 @@ export const checkEventOverlaps = function (event, otherCellEvents) {
   return cellEvents
 } */
 
-export const checkOverlappingEvents = function ({ event, comparisonArray, cellEvents }) {
-
-}
 /* export const checkOverlappingEvents = function ({ event, comparisonArray, cellEvents }) {
   const src = (event.multipleDays.daysCount && event.multipleDays) || event
   const { startTimeMinutes: startTimeMinE1, endTimeMinutes: endTimeMinE1 } = src
