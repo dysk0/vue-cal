@@ -64,11 +64,11 @@ export default {
       if (!event.startTime || this.vuecal.view.id === 'month' || this.allDayEvents) return {}
       const resizeAnEvent = this.domEvents.resizeAnEvent
 
-      let sortedEvents = this.cellSortedEvents.filter(id => id === event.id || this.cellOverlappingEvents[event.id].includes(id))
+      const sortedEvents = this.cellSortedEvents.filter(id => id === event.id || this.cellOverlappingEvents[event.id].includes(id))
 
-      let deepOverlaps = checkDeepOverlaps(event)
+      const deepOverlaps = checkDeepOverlaps(event)
 
-      const eventWidth = 100 / (1 + (this.cellOverlappingEvents[event.id].length && 1) + (deepOverlaps.length ? deepOverlaps.length - 1 : 0))
+      const eventWidth = 100 / (1 + (this.cellOverlappingEvents[event.id].length && 1) + (deepOverlaps ? deepOverlaps: 0))
 
       return {
         top: `${event.top}px`,

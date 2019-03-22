@@ -150,16 +150,65 @@ export const checkDeepOverlaps = event => {
   let { [event.startDate]: cellOverlaps } = cellOverlappingEvents
   let overlaps = cellOverlaps[event.id]
   let intersecting = []
+  let comparedEvents = []
 
+  // overlaps.forEach(id => {
+  //   if (!comparedEvents.includes(id) && !intersecting.includes(id)) {
+  //     // check array intersections between current overlap and all its overlaps.
+  //     const eventIds = cellOverlaps[id].filter(id2 => overlaps.includes(id2))
+  //     if (eventIds) intersecting.push(...eventIds)
+
+  //     comparedEvents.push(id)
+  //   }
+  // })
+
+  // overlaps = [10, 11, 7]
+  // {
+  //   6:  [10, 11, 7]
+  //   10: [6, 11, 7]
+  //   11: [6, 10]
+  //   7:  [6, 10]
+  // }
+  let overlapsCount = overlaps.length
+  // [10, 11, 7]
   overlaps.forEach(id => {
-    // check array intersections between current overlap and all its overlaps.
-    const eventIds = cellOverlaps[id].filter(id2 => overlaps.includes(id2))
-    if (eventIds) intersecting.push(...eventIds)
+    // if (overlaps of id does not have 11 and 7) overlapsCount--
+    // if (overlaps of id does not have 10 and 7) overlapsCount--
+    // if (overlaps of id does not have 10 and 11) overlapsCount--
+
+    // if (!cellOverlaps[id].includes(e => { })) overlapsCount--
+
+    // [6, 11, 7] => [11, 7]
+    cellOverlaps[id].filter(id2 => id2 !== event.id).forEach(id2 => {
+      let eventOverlapsWOCurrent = overlaps.filter(id3 => id3 !== id2)// [10, 7]
+      let currentOverlapOverlaps = cellOverlaps[id2].filter(id2 => id2 !== event.id)// 11: [6, 10] => [10]
+
+      // 11: [6, 10] => [10]
+      // if (cellOverlaps[id2].filter(id2 => id2 !== event.id) in ) overlapsCount--
+
+      // check array intersections between current overlap and all its overlaps.
+      const intersection = eventOverlapsWOCurrent.filter(id3 => currentOverlapOverlaps.includes(id3))
+      if (intersection.length < eventOverlapsWOCurrent.length) overlapsCount--
+    })
   })
 
-  // Return unique array.
-  return intersecting.filter((v, i, a) => a.indexOf(v) === i)
+  return overlapsCount
 }
+// export const checkDeepOverlaps = event => {
+//   let { [event.startDate]: cellOverlaps } = cellOverlappingEvents
+//   let overlaps = cellOverlaps[event.id]
+//   let intersecting = []
+//   let comparedEvents = []
+
+//   overlaps.forEach(id => {
+//     // check array intersections between current overlap and all its overlaps.
+//     const eventIds = cellOverlaps[id].filter(id2 => overlaps.includes(id2))
+//     if (eventIds) intersecting.push(...eventIds)
+//   })
+
+//   // Return unique array.
+//   return intersecting.filter((v, i, a) => a.indexOf(v) === i)
+// }
 
 /**
  * Check if an event is intersecting a time range.
