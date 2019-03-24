@@ -2069,8 +2069,22 @@ export default {
         class: 'health'
       },
       {
-        start: '2018-11-21 16:00',
+        start: '2018-11-21 10:00',
         end: '2018-11-21 19:00',
+        title: 'Another thing',
+        content: '<i class="v-icon material-icons">thumb_up</i>',
+        class: 'blue-event'
+      },
+      {
+        start: '2018-11-21 12:00',
+        end: '2018-11-21 19:00',
+        title: 'Another thing',
+        content: '<i class="v-icon material-icons">thumb_up</i>',
+        class: 'blue-event'
+      },
+      {
+        start: '2018-11-21 16:00',
+        end: '2018-11-21 23:00',
         title: 'Another thing',
         content: '<i class="v-icon material-icons">thumb_up</i>',
         class: 'blue-event'

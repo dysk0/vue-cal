@@ -1,0 +1,235 @@
+import Vue from 'vue'
+
+// Object of cells (days) containing array of overlapping events.
+export let cellOverlappingEvents = {}
+// Example of data.
+// 2018-11-21: {
+//   258_6: [],
+//   258_7: ["258_10"],
+//   258_10: ["258_7", "258_11", "258_12"],
+//   258_11: ["258_10", "258_12"],
+//   258_12: ["258_10", "258_11"]
+// }
+export let cellSortedEvents = {}
+export let cellEventWidths = {}
+
+export const checkCellOverlaps = (cellDate, cellEvents) => {
+  if (!cellOverlappingEvents[cellDate]) cellOverlappingEvents[cellDate] = {}
+
+  cellEvents.forEach(e1 => {
+    let { [cellDate]: { [e1.id]: eventOverlaps } } = cellOverlappingEvents
+    if (!eventOverlaps) eventOverlaps = cellOverlappingEvents[cellDate][e1.id] = []
+
+    // Foreach cell event compare with all others to see if overlapping and store in a global array.
+    updateEventOverlaps(e1, cellEvents, true)
+  })
+
+  // console.log(cellOverlappingEvents)
+
+  if (cellDate === '2018-11-21') getLongestOverlapsLine(cellDate)
+
+  cellSortedEvents[cellDate] = cellEvents.sort((a, b) => a.startTimeMinutes - b.startTimeMinutes).map(e => e.id)
+}
+
+/**
+ * Check if an event is intersecting a time range.
+ *
+ * @param {Number} start Start of time range
+ * @param {Number} end End of time range
+ * @param {Object} event An event to check if in time range
+ * @return {Boolean} true if in range false otherwise
+ */
+export const eventInTimeRange = (start, end, event) => {
+  const dragEventOverlapStillEvent = (start <= event.startTimeMinutes) && (end > event.startTimeMinutes)
+  const stillEventOverlapDragEvent = (event.startTimeMinutes <= start) && (event.endTimeMinutes > start)
+
+  return dragEventOverlapStillEvent || stillEventOverlapDragEvent
+}
+
+export const updateEventOverlaps = (e1, cellEvents, init = false) => {
+  // Foreach cell event compare with all others to see if overlapping and store in a global array.
+  cellEvents.forEach(e2 => {
+    if (e2.id === e1.id) return
+
+    const overlaps = eventInTimeRange(e1.startTimeMinutes, e1.endTimeMinutes, e2)
+    const inOverlapsArray = cellOverlappingEvents[e1.startDate][e1.id].indexOf(e2.id)
+    if (overlaps && inOverlapsArray === -1) cellOverlappingEvents[e1.startDate][e1.id].push(e2.id)
+    else if (!overlaps && inOverlapsArray > -1) cellOverlappingEvents[e1.startDate][e1.id].splice(inOverlapsArray, 1)
+  })
+
+  // if (!init) Vue.nextTick(() => getLongestOverlapsLine(e1.startDate))
+  if (!init) cellEventWidths[e1.startDate][e1.id] = getRecursiveOverlaps(e1.id, cellOverlappingEvents[e1.startDate])
+}
+
+// Example of data.
+// 2018-11-21: {
+//   258_6: [],
+//   258_7: ["258_10"],
+//   258_10: ["258_7", "258_11", "258_12"],
+//   258_11: ["258_10", "258_12"],
+//   258_12: ["258_10", "258_11"]
+// }
+export const getLongestOverlapsLine = cellDate => {
+  // Foreach cell event compare with all others to see if overlapping.
+  const cellEvents = Object.keys(cellOverlappingEvents[cellDate])
+  const cellOverlaps = Object.values(cellOverlappingEvents[cellDate])
+  if (!cellEventWidths[cellDate]) cellEventWidths[cellDate] = {}
+  // let eventWidths = {
+  //   258_6: 1,
+  //   258_7: 4,
+  //   258_10: 3,
+  //   258_11: 3,
+  //   258_12: 3
+  // }
+
+
+  cellEvents.forEach(id => {
+    cellEventWidths[cellDate][id] = getRecursiveOverlaps(id, cellOverlappingEvents[cellDate])
+  })
+
+  // cellEventWidths[cellDate] = eventWidths
+  console.log(cellEventWidths[cellDate])
+}
+
+// Recursively get the number of event overlaps of a given event on the same line.
+const getRecursiveOverlaps = (id, cellEvents, overlapLines = {}) => {
+  let max = 0
+
+  // if (id === '258_10') debugger
+  if (!overlapLines[id]) overlapLines[id] = [[id]]
+  let currentLine = overlapLines[id][overlapLines[id].length - 1]
+  const lastEventOfArray = currentLine[currentLine.length - 1]
+
+  if (cellEvents[lastEventOfArray].length) {
+    console.log('checking overlaps for ', currentLine[0], [...overlapLines[id]])
+    cellEvents[lastEventOfArray].forEach(id2 => {
+      if (!currentLine.includes(id2)) {
+        const inFirstEventOverlaps = cellEvents[id].includes(id2)
+        // All the overlaps in currentLine are present in list of cellEvents[id2]
+        const containsFullLine = currentLine.filter(id3 => cellEvents[id2].includes(id3)).length === currentLine.length
+        console.log('laa', containsFullLine)
+
+        if (inFirstEventOverlaps && containsFullLine) {
+          currentLine.push(id2)
+          // if (cellEvents[id2]) getRecursiveOverlaps(id, cellEvents, overlapLines)
+          // else {
+          //   if (!inFirstEventOverlaps) {
+          //     debugger
+          //     // currentLine.pop()
+          //     overlapLines[id].push([id, id2])
+          //     // debugger
+          //     getRecursiveOverlaps(id, cellEvents, overlapLines)
+          //   }
+          // }
+        }
+        else if (inFirstEventOverlaps) {
+          overlapLines[id].push([id, id2])
+          // debugger
+          getRecursiveOverlaps(id, cellEvents, overlapLines)
+        }
+      }
+    })
+  }
+  else {
+    // debugger
+    // if (currentLine.length > 1) {
+    //   overlapLines[id].push([id])
+    //   debugger
+    //   getRecursiveOverlaps(id, cellEvents, overlapLines)
+    // }
+
+    // currentLine.push(currentLine.slice(0))
+    // max =
+  }
+
+  // Count the highest possibility from array lengths.
+  return Math.max(...overlapLines[id].map(array => array.length))
+}
+
+export const updateCellEventWidths = (event, cellEvents) => {
+
+}
+
+// Will recalculate all the overlaps of the current cell OR split.
+// cellEvents will contain only the current split events if in a split.
+/* export const checkEventOverlaps = (event, otherCellEvents) => {
+  let { [event.startDate]: cellOverlaps } = cellOverlappingEvents
+  if (!cellOverlaps[event.id]) cellOverlaps[event.id] = []
+
+  // For each other event of the cell, check if overlapping current dragging event
+  // and add it if not already in overlapping events.
+  otherCellEvents.forEach(e => {
+    if (!cellOverlaps[e.id]) cellOverlaps[e.id] = []
+
+    if (eventInTimeRange(event.startTimeMinutes, event.endTimeMinutes, e)) {
+      if (cellOverlaps[event.id].indexOf(e.id) === -1) cellOverlaps[event.id].push(e.id)
+      if (cellOverlaps[e.id].indexOf(event.id) === -1) cellOverlaps[e.id].push(event.id)
+    }
+    else {
+      let dragEventInOverlaps = cellOverlaps && cellOverlaps[event.id] && cellOverlaps[event.id].indexOf(e.id) > -1
+      let stillEventInOverlaps = cellOverlaps && cellOverlaps[e.id] && cellOverlaps[e.id].indexOf(event.id) > -1
+
+      // Delete still event id from dragging array.
+      if (dragEventInOverlaps) {
+        let eventIndex = cellOverlaps[event.id].indexOf(e.id)
+        cellOverlaps[event.id].splice(eventIndex, 1)
+      }
+
+      // Delete dragging event id from still event.
+      if (stillEventInOverlaps) {
+        let eventIndex = cellOverlaps[e.id].indexOf(event.id)
+        cellOverlaps[e.id].splice(eventIndex, 1)
+      }
+    }
+  })
+} */
+
+// {
+//   6:  [10, 11, 7]
+//   10: [6, 11, 7]
+//   11: [6, 10]
+//   7:  [6, 10]
+// }
+// event = 6
+/* export const checkDeepOverlaps = event => {
+  let { [event.startDate]: cellOverlaps } = cellOverlappingEvents
+  let overlaps = cellOverlaps[event.id]
+
+  // Start with all overlaps count, then run through each and decrement when 1 does not overlap all others.
+  let overlapsCount = overlaps.length
+  let checkedEvents = []
+
+  // 6: [10, 11, 7], overlapsCount=3
+  //-------------------- now foreach overlap decrement if needed:
+  // 10 | [6ø, 11, 7]    =>   11, 7 from `overlaps` in this array.      ok
+  // 11 | [6ø, 10]       =>   10, 7 from overlaps not in this array.    -1
+  // 7: | [6ø, 10]       =>   pass
+  overlaps.forEach(id => {
+    // id = 10
+    // id = 11
+    // id = 7
+
+    // if (overlaps of id does not have 11 and 7) overlapsCount--
+    // if (overlaps of id does not have 10 and 7) overlapsCount--
+    // if (overlaps of id does not have 10 and 11) overlapsCount--
+
+    // Remove requested event id from array.
+    let overlapOverlaps = cellOverlaps[id].filter(id2 => id2 !== event.id) // [6, 11, 7] => [11, 7]
+
+    // If requested event overlaps are all in the overlapOverlaps, ok. otherwise decrement 1 & put the missing event in checkedEvents.
+    let reqEventOverlapsWOCurrent = overlaps.filter(id2 => id2 !== id) // [11, 7]
+    // if all reqEventOverlapsWOCurrent are in overlapOverlaps, then ok. otherwise decrement overlapsCount.
+    let notOverlappingAll = reqEventOverlapsWOCurrent.filter(id2 => !overlapOverlaps.includes(id2))
+    let notOverlappingNotInChecked = notOverlappingAll.every(i => checkedEvents.includes(i))
+    // if (notOverlappingAll.filter(id2 => id2 !== id).length && !checkedEvents.includes(id) && !notOverlappingNotInChecked) {
+    //   overlapsCount -= notOverlappingAll.length
+    //   checkedEvents.push(...notOverlappingAll)
+    // }
+    if (notOverlappingAll.filter(id2 => id2 !== id).length) {
+      if (!checkedEvents.includes(id) && !notOverlappingNotInChecked) overlapsCount -= notOverlappingAll.length
+      checkedEvents.push(...notOverlappingAll)
+    }
+  })
+
+  return overlapsCount
+} */

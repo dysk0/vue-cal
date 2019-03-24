@@ -13,8 +13,9 @@
     v-if="vuecal.editableEvents"
     @mousedown.stop.prevent="deleteEvent(event)"
     @touchstart.stop.prevent="touchDeleteEvent(event)") {{ vuecal.texts.deleteEvent }}
-  slot(:event="event" :view="vuecal.view.id" name="event-renderer")
-  | {{ event.id }} &bull; {{ cellOverlappingEvents[event.id] }}
+  //- slot(:event="event" :view="vuecal.view.id" name="event-renderer")
+  strong.px-2.d-inline-block(style="border-bottom: 1px solid rgba(0,0,0,0.15)") {{ event.id }}
+  div {{ cellOverlappingEvents[event.id] }}
   .vuecal__event-resize-handle(
     v-if="resizable"
     @mousedown="vuecal.editableEvents && vuecal.time && onDragHandleMouseDown($event, event)"
@@ -22,7 +23,8 @@
 </template>
 
 <script>
-import { deleteAnEvent, onResizeEvent, cellOverlappingEvents, cellSortedEvents, checkDeepOverlaps } from './event-utils'
+import { deleteAnEvent, onResizeEvent, /* cellOverlappingEvents, cellSortedEvents, checkDeepOverlaps */ } from './event-utils'
+import { cellOverlappingEvents, cellSortedEvents, cellEventWidths } from './event-overlaps'
 
 export default {
   props: {
@@ -55,6 +57,7 @@ export default {
   data () {
     return {
       cellOverlappingEvents: cellOverlappingEvents[this.event.startDate],
+      cellEventWidths: cellEventWidths[this.event.startDate],
       cellSortedEvents: cellSortedEvents[this.event.startDate]
     }
   },
@@ -65,7 +68,10 @@ export default {
       const resizeAnEvent = this.domEvents.resizeAnEvent
       const sortedEvents = this.cellSortedEvents.filter(id => id === event.id || this.cellOverlappingEvents[event.id].includes(id))
 
-      const eventWidth = 100 / (1 + checkDeepOverlaps(event))
+      // const eventWidth = 100 / (1 + checkDeepOverlaps(event))
+
+      const eventWidth = 100 / (this.cellEventWidths && this.cellEventWidths[event.id] || 1)
+
 
       return {
         top: `${event.top}px`,

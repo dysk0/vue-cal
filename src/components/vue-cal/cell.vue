@@ -28,7 +28,8 @@
 </template>
 
 <script>
-import { updateEventPosition, initCellOverlappingEvents } from './event-utils'
+import { updateEventPosition } from './event-utils'
+import { checkCellOverlaps } from './event-overlaps'
 import Event from './event'
 
 export default {
@@ -64,7 +65,7 @@ export default {
     }
   },
   created () {
-    initCellOverlappingEvents(
+    checkCellOverlaps(
       this.formattedDate,
       this.splits.length ? this.splitEvents[i] : this.events
     )

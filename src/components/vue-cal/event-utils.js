@@ -1,15 +1,5 @@
 import Vue from 'vue'
-
-// Object of cells (days) containing array of overlapping events.
-export let cellOverlappingEvents = {}
-// Example of data.
-// 2018-03-20: {
-//   257_6: ["257_10", "257_11", "257_7"],
-//   257_7: ["257_6"],
-//   257_10: ["257_6", "257_11"],
-//   257_11: ["257_6", "257_10"]
-// }
-export let cellSortedEvents = {}
+import { updateEventOverlaps } from './event-overlaps'
 
 export const deleteAnEvent = ({ event, vuecal }) => {
   vuecal.emitWithEvent('event-delete', event)
@@ -65,7 +55,7 @@ export const onResizeEvent = ({ vuecal, cellEvents }) => {
     updateEndTimeOnResize(event, vuecal)
 
     // if (!event.background) checkCellOverlappingEvents({ event, split: event.split || 0, cellEvents, vuecal })
-    checkEventOverlaps(event, cellEvents.filter(e => e.id !== event.id))
+    updateEventOverlaps(event, cellEvents)
   }
 }
 
@@ -93,137 +83,6 @@ export const updateEndTimeOnResize = (event, vuecal) => {
       eventToModify.end = event.end
     })
   }
-}
-
-export const initCellOverlappingEvents = (cellDate, cellEvents) => {
-  if (!cellOverlappingEvents[cellDate]) cellOverlappingEvents[cellDate] = {}
-  let eventsToCompare = cellEvents.slice(0)
-
-  cellEvents.forEach(event => {
-    // Remove the current event from the list when compared for performance.
-    eventsToCompare.shift()
-    checkEventOverlaps(event, eventsToCompare)
-  })
-
-  // cellSortedEvents[cellDate] = {}
-  cellSortedEvents[cellDate] = cellEvents.sort((a, b) => a.startTimeMinutes - b.startTimeMinutes).map(e => e.id)
-}
-
-// Will recalculate all the overlaps of the current cell OR split.
-// cellEvents will contain only the current split events if in a split.
-export const checkEventOverlaps = (event, otherCellEvents) => {
-  let { [event.startDate]: cellOverlaps } = cellOverlappingEvents
-  if (!cellOverlaps[event.id]) cellOverlaps[event.id] = []
-
-  // For each other event of the cell, check if overlapping current dragging event
-  // and add it if not already in overlapping events.
-  otherCellEvents.forEach(e => {
-    if (!cellOverlaps[e.id]) cellOverlaps[e.id] = []
-
-    if (eventInTimeRange(event.startTimeMinutes, event.endTimeMinutes, e)) {
-      if (cellOverlaps[event.id].indexOf(e.id) === -1) cellOverlaps[event.id].push(e.id)
-      if (cellOverlaps[e.id].indexOf(event.id) === -1) cellOverlaps[e.id].push(event.id)
-    }
-    else {
-      let dragEventInOverlaps = cellOverlaps && cellOverlaps[event.id] && cellOverlaps[event.id].indexOf(e.id) > -1
-      let stillEventInOverlaps = cellOverlaps && cellOverlaps[e.id] && cellOverlaps[e.id].indexOf(event.id) > -1
-
-      // Delete still event id from dragging array.
-      if (dragEventInOverlaps) {
-        let eventIndex = cellOverlaps[event.id].indexOf(e.id)
-        cellOverlaps[event.id].splice(eventIndex, 1)
-      }
-
-      // Delete dragging event id from still event.
-      if (stillEventInOverlaps) {
-        let eventIndex = cellOverlaps[e.id].indexOf(event.id)
-        cellOverlaps[e.id].splice(eventIndex, 1)
-      }
-    }
-  })
-}
-
-// {
-//   6:  [10, 11, 7]
-//   10: [6, 11, 7]
-//   11: [6, 10]
-//   7:  [6, 10]
-// }
-// event = 6
-export const checkDeepOverlaps = event => {
-  let { [event.startDate]: cellOverlaps } = cellOverlappingEvents
-  let overlaps = cellOverlaps[event.id]
-
-  // Start with all overlaps count, then run through each and decrement when 1 does not overlap all others.
-  let overlapsCount = overlaps.length
-  let checkedEvents = []
-
-  // 6: [10, 11, 7], overlapsCount=3
-  //-------------------- now foreach overlap decrement if needed:
-  // 10 | [6ø, 11, 7]    =>   11, 7 from `overlaps` in this array.      ok
-  // 11 | [6ø, 10]       =>   10, 7 from overlaps not in this array.    -1
-  // 7: | [6ø, 10]       =>   pass
-  overlaps.forEach(id => {
-    // id = 10
-    // id = 11
-    // id = 7
-
-    // if (overlaps of id does not have 11 and 7) overlapsCount--
-    // if (overlaps of id does not have 10 and 7) overlapsCount--
-    // if (overlaps of id does not have 10 and 11) overlapsCount--
-
-    // Remove requested event id from array.
-    let overlapOverlaps = cellOverlaps[id].filter(id2 => id2 !== event.id) // [6, 11, 7] => [11, 7]
-
-    // If requested event overlaps are all in the overlapOverlaps, ok. otherwise decrement 1 & put the missing event in checkedEvents.
-    let reqEventOverlapsWOCurrent = overlaps.filter(id2 => id2 !== id) // [11, 7]
-    // if all reqEventOverlapsWOCurrent are in overlapOverlaps, then ok. otherwise decrement overlapsCount.
-    let notOverlappingAll = reqEventOverlapsWOCurrent.filter(id2 => !overlapOverlaps.includes(id2))
-    let notOverlappingNotInChecked = notOverlappingAll.every(i => checkedEvents.includes(i))
-    if (notOverlappingAll.filter(id2 => id2 !== id).length && !checkedEvents.includes(id) && !notOverlappingNotInChecked) {
-      overlapsCount -= notOverlappingAll.length
-      checkedEvents.push(...notOverlappingAll)
-    }
-  })
-
-  return overlapsCount
-}
-
-/**
- * Check if an event is intersecting a time range.
- *
- * @param {Number} start Start of time range
- * @param {Number} end End of time range
- * @param {Object} event An event to check if in time range
- * @return {Boolean} true if in range false otherwise
- */
-export const eventInTimeRange = (start, end, event) => {
-  let dragEventOverlapStillEvent = (start <= event.startTimeMinutes) && (end > event.startTimeMinutes)
-  let stillEventOverlapDragEvent = (event.startTimeMinutes <= start) && (event.endTimeMinutes > start)
-
-  return dragEventOverlapStillEvent || stillEventOverlapDragEvent
-}
-
-/**
- * Returns an array of event ids in range.
- *
- * @param {Number} start Start of time range
- * @param {Number} end End of time range
- * @param {Array} events An array of events to check if in time range
- * @return {Array} Array of event ids in range
- */
-export const eventsInTimeRange = (start, end, events) => {
-  let overlaps = []
-
-  events.forEach(e => {
-    let stillEventStart = e.startTimeMinutes
-    let stillEventEnd = e.endTimeMinutes
-    let dragEventOverlapStillEvent = (start <= stillEventStart) && (end > stillEventStart)
-    let stillEventOverlapDragEvent = (stillEventStart <= start) && (stillEventEnd > start)
-
-    if (dragEventOverlapStillEvent || stillEventOverlapDragEvent) overlaps.push(e.id)
-  })
-  return overlaps
 }
 
 export const updateEventPosition = ({ event, vuecal }) => {
