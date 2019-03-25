@@ -57,8 +57,8 @@ export const updateEventOverlaps = (e1, cellEvents, init = false) => {
     else if (!overlaps && inOverlapsArray > -1) cellOverlappingEvents[e1.startDate][e1.eid].splice(inOverlapsArray, 1)
   })
 
-  // if (!init) Vue.nextTick(() => getLongestOverlapsLine(e1.startDate))
-  if (!init) cellEventWidths[e1.startDate][e1.eid] = getRecursiveOverlaps(e1.eid, cellOverlappingEvents[e1.startDate])
+  if (!init) getLongestOverlapsLine(e1.startDate)
+  // if (!init) cellEventWidths[e1.startDate][e1.eid] = getRecursiveOverlaps(e1.eid, cellOverlappingEvents[e1.startDate])
 }
 
 // Example of data.
@@ -81,7 +81,6 @@ export const getLongestOverlapsLine = cellDate => {
   //   258_11: 3,
   //   258_12: 3
   // }
-
 
   cellEvents.forEach(id => {
     cellEventWidths[cellDate][id] = getRecursiveOverlaps(id, cellOverlappingEvents[cellDate])
@@ -107,47 +106,21 @@ const getRecursiveOverlaps = (id, cellEvents, overlapLines = {}) => {
         const inFirstEventOverlaps = cellEvents[id].includes(id2)
         // All the overlaps in currentLine are present in list of cellEvents[id2]
         const containsFullLine = currentLine.filter(id3 => cellEvents[id2].includes(id3)).length === currentLine.length
-        console.log('laa', containsFullLine)
 
         if (inFirstEventOverlaps && containsFullLine) {
           currentLine.push(id2)
           // if (cellEvents[id2]) getRecursiveOverlaps(id, cellEvents, overlapLines)
-          // else {
-          //   if (!inFirstEventOverlaps) {
-          //     debugger
-          //     // currentLine.pop()
-          //     overlapLines[id].push([id, id2])
-          //     // debugger
-          //     getRecursiveOverlaps(id, cellEvents, overlapLines)
-          //   }
-          // }
         }
         else if (inFirstEventOverlaps) {
           overlapLines[id].push([id, id2])
-          // debugger
           getRecursiveOverlaps(id, cellEvents, overlapLines)
         }
       }
     })
   }
-  else {
-    // debugger
-    // if (currentLine.length > 1) {
-    //   overlapLines[id].push([id])
-    //   debugger
-    //   getRecursiveOverlaps(id, cellEvents, overlapLines)
-    // }
-
-    // currentLine.push(currentLine.slice(0))
-    // max =
-  }
 
   // Count the highest possibility from array lengths.
   return Math.max(...overlapLines[id].map(array => array.length))
-}
-
-export const updateCellEventWidths = (event, cellEvents) => {
-
 }
 
 // Will recalculate all the overlaps of the current cell OR split.
