@@ -1,22 +1,22 @@
 import Vue from 'vue'
 import { updateEventOverlaps } from './event-overlaps'
 
-export const deleteAnEvent = ({ event, vuecal }) => {
+export const deleteAnEvent = (event, vuecal) => {
   vuecal.emitWithEvent('event-delete', event)
 
   let eventDate = (event.multipleDays && event.multipleDays.startDate) || event.startDate
   // Filtering from vuecal.mutableEvents since current cell might only contain all day events or vice-versa.
   let cellEvents = vuecal.mutableEvents[eventDate]
   // Delete the event.
-  vuecal.mutableEvents[eventDate] = cellEvents.filter(e => e.id !== event.id)
+  vuecal.mutableEvents[eventDate] = cellEvents.filter(e => e.eid !== event.eid)
   cellEvents = vuecal.mutableEvents[eventDate]
 
   // Delete event from overlaps cached array.
   let { [event.startDate]: cellOverlaps } = cellOverlappingEvents
-  cellOverlaps[event.id].forEach(id => {
-    cellOverlaps[id] = cellOverlaps[id].filter(id2 => id2 !== event.id)
+  cellOverlaps[event.eid].forEach(id => {
+    cellOverlaps[id] = cellOverlaps[id].filter(id2 => id2 !== event.eid)
   })
-  delete cellOverlaps[event.id]
+  delete cellOverlaps[event.eid]
   debugger
 
   // @todo: redo multiple day events after overlaps is working.
@@ -24,8 +24,8 @@ export const deleteAnEvent = ({ event, vuecal }) => {
   // if (event.multipleDays.daysCount) {
   //   event.linked.forEach(e => {
   //     let dayToModify = vuecal.mutableEvents[e.date]
-  //     let eventToDelete = dayToModify.find(e2 => e2.id === e.id)
-  //     vuecal.mutableEvents[e.date] = dayToModify.filter(e2 => e2.id !== e.id)
+  //     let eventToDelete = dayToModify.find(e2 => e2.eid === e.eid)
+  //     vuecal.mutableEvents[e.date] = dayToModify.filter(e2 => e2.eid !== e.eid)
 
   //     if (!e.background) {
   //       // Remove this event from possible other overlapping events of the same cell.
@@ -41,26 +41,39 @@ export const deleteAnEvent = ({ event, vuecal }) => {
 }
 
 const deleteLinkedEvents = (event, cellEvents) => {
-  // Object.keys(event.overlapped).forEach(id => (delete cellEvents.find(item => item.id === id).overlapping[event.id]))
-  // Object.keys(event.overlapping).forEach(id => (delete cellEvents.find(item => item.id === id).overlapped[event.id]))
-  // Object.keys(event.simultaneous).forEach(id => (delete cellEvents.find(item => item.id === id).simultaneous[event.id]))
+  // Object.keys(event.overlapped).forEach(id => (delete cellEvents.find(item => item.eid === id).overlapping[event.eid]))
+  // Object.keys(event.overlapping).forEach(id => (delete cellEvents.find(item => item.eid === id).overlapped[event.eid]))
+  // Object.keys(event.simultaneous).forEach(id => (delete cellEvents.find(item => item.eid === id).simultaneous[event.eid]))
 }
 
-export const onResizeEvent = ({ vuecal, cellEvents }) => {
+
+export const onResizeEvent = (cellEvents, vuecal) => {
   let { eventId, newHeight } = vuecal.domEvents.resizeAnEvent
-  let event = cellEvents.find(e => e.id === eventId)
+  let event = cellEvents.find(e => e.eid === eventId)
 
   if (event) {
-    event.height = Math.max(newHeight, 10)
+    const minEventHeight = Math.max(newHeight, 10)
+    const eventStart = !isNaN(event.multipleDays.startTimeMinutes)
+                     ? Math.max(event.multipleDays.startTimeMinutes, vuecal.timeFrom) : event.startTimeMinutes
+
+    // While dragging event, prevent event to span beyond vuecal.timeTo.
+    let maxEventHeight = (vuecal.timeTo - eventStart) * vuecal.timeCellHeight / vuecal.timeStep
+    event.height = Math.min(minEventHeight, maxEventHeight)
+
+    // Allow dragging until midnight but block height at vuecal.timeTo.
+    maxEventHeight = (24 * 60 - eventStart) * vuecal.timeCellHeight / vuecal.timeStep
+    event.maxHeight = Math.min(minEventHeight, maxEventHeight)
     updateEndTimeOnResize(event, vuecal)
 
-    // if (!event.background) checkCellOverlappingEvents({ event, split: event.split || 0, cellEvents, vuecal })
+    // if (!event.background) checkCellOverlappingEvents(cellEvents)
     updateEventOverlaps(event, cellEvents)
   }
 }
 
-export const updateEndTimeOnResize = (event, vuecal) => {
-  const bottom = event.top + event.height
+const updateEndTimeOnResize = (event, vuecal) => {
+  // event.maxHeight is the maximum height the event can take, up to midnight.
+  // But event.height is limited to vuecal.timeTo to prevent event overflowing the view.
+  const bottom = event.top + event.maxHeight
   const endTime = (bottom / vuecal.timeCellHeight * vuecal.timeStep + vuecal.timeFrom) / 60
   const hours = parseInt(endTime)
   const minutes = parseInt((endTime - hours) * 60)
@@ -75,8 +88,8 @@ export const updateEndTimeOnResize = (event, vuecal) => {
     event.multipleDays.end = event.end
 
     event.linked.forEach(e => {
-      let dayToModify = vuecal.mutableEvents[e.date]
-      let eventToModify = dayToModify.find(e2 => e2.id === e.id)
+      const dayToModify = vuecal.mutableEvents[e.date]
+      let eventToModify = dayToModify.find(e2 => e2.eid === e.eid)
 
       eventToModify.endTimeMinutes = event.endTimeMinutes
       eventToModify.endTime = event.endTime
@@ -85,13 +98,15 @@ export const updateEndTimeOnResize = (event, vuecal) => {
   }
 }
 
-export const updateEventPosition = ({ event, vuecal }) => {
+export const updateEventPosition = (event, vuecal) => {
   const src = (event.multipleDays.daysCount && event.multipleDays) || event
   const { startTimeMinutes, endTimeMinutes } = src
 
+  // Top of event.
   let minutesFromTop = startTimeMinutes - vuecal.timeFrom
   const top = Math.round(minutesFromTop * vuecal.timeCellHeight / vuecal.timeStep)
 
+  // Bottom of event.
   minutesFromTop = Math.min(endTimeMinutes, vuecal.timeTo) - vuecal.timeFrom
   const bottom = Math.round(minutesFromTop * vuecal.timeCellHeight / vuecal.timeStep)
 

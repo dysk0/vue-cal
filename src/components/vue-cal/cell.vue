@@ -65,10 +65,7 @@ export default {
     }
   },
   created () {
-    checkCellOverlaps(
-      this.formattedDate,
-      this.splits.length ? this.splitEvents[i] : this.events
-    )
+    checkCellOverlaps( this.formattedDate, this.splits.length ? this.splitEvents[i] : this.events)
   },
 
   computed: {
@@ -114,7 +111,7 @@ export default {
 
         events.forEach(event => {
           if (this.$parent.time && event.startTime && !(this.showAllDayEvents && this.allDayEvents)) {
-            updateEventPosition({ event, vuecal: this.$parent })
+            updateEventPosition(event, this.$parent)
           }
         })
 
